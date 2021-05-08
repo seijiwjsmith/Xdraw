@@ -9,18 +9,33 @@ Sample code:
 This code sets the cursor given a certain radius for the brush tool.
  
 ```cpp
-void set_cursor(GLFWwindow* window, int radius) { //colours are in little endian
-	assert(radius > 0); // should always be above 0
 
-	const int r = abs(radius);   // ensure radius is positive. Radius min/max is handled elsewhere.
-	const int d = r*2 + 1;       // finding diameter, +1 to make odd to properly center cursor.
+//radius constants
+constexpr int max_radius = 500;
+constexpr int min_radius = 1;
+
+//offsets for cursor
+constexpr float middle_offset = 0.6f;
+constexpr float inner_offset = 1.0f;
+
+//colours for cursor
+constexpr int transparent_black = 0x2f000000;
+constexpr int transparent = 0;
+constexpr int white = ~0;
+
+...
+
+void set_cursor(GLFWwindow* window, int radius) { //colours are in little endian
+	assert(radius >= min_radius && radius <= max_radius); // check for debugging purposes
+
+	const int r = std::clamp(radius, min_radius, max_radius); // extra check for correct range
+	const int d = r*2 + 1;    // finding diameter, +1 to make odd, to properly center cursor.
 	const int d2 = d * d;
 
-	std::vector<int> pixels;
-	pixels.resize(d2);
+	std::vector<int> pixels; 
+	pixels.resize(d2); // dxd grid of pixels, 32-bit RGBA
 
 	for (int i = 0; i < d2; i++) {
-		
 		int y = i / d;      // get y-coordinate
 		int x = i - y * d;  // get x-coordinate
 		y -= r;             // transform coordinates, s.t. 0,0 is the center of pixel grid.
@@ -28,17 +43,17 @@ void set_cursor(GLFWwindow* window, int radius) { //colours are in little endian
 
 		float dist = length(vec2(x, y)); // dist = how far x,y is from pixel grid center.
 		
-		float inner_rad1 = r - 0.6f;
-		float inner_rad2 = r - 1.0f;
+		float middle_radius = r - middle_offset;
+		float inner_radius = r - inner_offset;
 
-		if (dist <= r && dist > inner_rad1) {
-			pixels[i] = ~0; // set to white
+		if (dist <= r && dist > middle_radius) {
+			pixels[i] = white;
 		}
-		else if (dist <= inner_rad1 && dist > inner_rad2) {
-			pixels[i] = 0x2f000000; // transparent black
+		else if (dist <= middle_radius && dist > inner_radius) {
+			pixels[i] = transparent_black;
 		}
 		else {
-			pixels[i] = 0; // transparent
+			pixels[i] = transparent;
 		}
 	}
 
@@ -51,5 +66,5 @@ void set_cursor(GLFWwindow* window, int radius) { //colours are in little endian
 
 	cursor = glfwCreateCursor(&image, r , r);
 	glfwSetCursor(window, cursor);
-	
 }
+
